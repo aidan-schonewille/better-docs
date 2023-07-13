@@ -69,15 +69,7 @@ var parseReact = function (filePath, doclet) {
   }
   
   return {
-    props: Object.entries(docGen.props || {}).map(([key, prop]) => ({
-      name: key,
-      description: prop.description,
-      type: prop.type ? prop.type.name : prop.flowType.name,
-      required: typeof prop.required === 'boolean' && prop.required,
-      defaultValue: prop.defaultValue
-        ? (prop.defaultValue.computed ? 'function()' : prop.defaultValue.value)
-        : undefined
-    })),
+    props: parseReactPropTypesRecursive(docGen.props),
     displayName: docGen.displayName,
     filePath: filePath,
   }
@@ -104,6 +96,25 @@ var parseVue = function (filePath, doclet) {
     }))
   }
 }
+
+//TODO: Write recursion for objectOf
+function parseReactPropTypesRecursive(props, parent = '', obj = []){
+  Object.entries(props || {}).forEach(([key, prop]) => {
+    if(prop?.type?.name === 'shape') {
+      parseReactPropTypesRecursive(prop.type.value, parent + key + '.', obj)
+    }
+    obj.push({
+      name: parent + key,
+      description: prop.description,
+      type: prop.name ? prop.name : (prop.type ? prop.type.name : prop.flowType.name),
+      required: typeof prop.required === 'boolean' && prop.required,
+      defaultValue: prop.defaultValue
+        ? (prop.defaultValue.computed ? 'function()' : prop.defaultValue.value)
+        : undefined
+    })
+  })
+  return obj
+} 
 
 exports.parseVue = parseVue
 exports.parseReact = parseReact
