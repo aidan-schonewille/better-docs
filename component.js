@@ -67,7 +67,7 @@ var parseReact = function (filePath, doclet) {
       throw error
     }
   }
-  
+
   return {
     props: parseReactPropTypesRecursive(docGen.props),
     displayName: docGen.displayName,
@@ -97,11 +97,15 @@ var parseVue = function (filePath, doclet) {
   }
 }
 
-//TODO: Write recursion for objectOf
+//TODO: Write recursion for arrayOf
 function parseReactPropTypesRecursive(props, parent = '', obj = []){
   Object.entries(props || {}).forEach(([key, prop]) => {
     if(prop?.type?.name === 'shape') {
       parseReactPropTypesRecursive(prop.type.value, parent + key + '.', obj)
+    } else if(prop?.name === 'objectOf'){
+      if (prop.value.name === 'shape') {
+        parseReactPropTypesRecursive(prop.value.value, parent + key + '{...}.', obj)
+      }
     }
     obj.push({
       name: parent + key,
@@ -114,7 +118,7 @@ function parseReactPropTypesRecursive(props, parent = '', obj = []){
     })
   })
   return obj
-} 
+}
 
 exports.parseVue = parseVue
 exports.parseReact = parseReact
