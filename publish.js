@@ -695,7 +695,7 @@ exports.publish = function(taffyData, opts, tutorials) {
   view.tutorials = members.tutorials
   members.components = helper.find(data, function(){
     return (this.component !== undefined && this.kind === 'class')
-})
+  })
   members.classes = helper.find(data, {kind: 'class', component: {isUndefined: true}})
 
   // output pretty-printed source files by default

@@ -97,20 +97,42 @@ var parseVue = function (filePath, doclet) {
   }
 }
 
-//TODO: Write recursion for arrayOf
 function parseReactPropTypesRecursive(props, parent = '', obj = []){
   Object.entries(props || {}).forEach(([key, prop]) => {
-    if(prop?.type?.name === 'shape') {
-      parseReactPropTypesRecursive(prop.type.value, parent + key + '.', obj)
-    } else if(prop?.name === 'objectOf'){
-      if (prop.value.name === 'shape') {
-        parseReactPropTypesRecursive(prop.value.value, parent + key + '{...}.', obj)
+    let computedType;
+    if(prop?.name) {
+      computedType = prop.name
+    } else {
+      switch(prop?.type?.name) {
+        case 'shape': 
+          parseReactPropTypesRecursive(prop.type.value, parent + key + '.', obj)
+          computedType = 'object'
+          break
+        case 'objectOf': 
+          if(prop.type.value?.name === 'shape'){
+            parseReactPropTypesRecursive(prop.type.value.value, parent + key + '{...}.', obj)
+            computedType = 'objectOf(object)'
+          } else {
+            computedType = `objectOf(${prop.type.value.name})`
+          }
+          break
+        case 'arrayOf':
+          if(prop.type.value?.name === 'shape'){
+            parseReactPropTypesRecursive(prop.type.value.value, parent + key + '[...].', obj)
+            computedType = 'arrayOf(object)'
+          } else {
+            computedType = `arrayOf(${prop.type.value.name})`
+          }
+          break
+        default:
+          computedType =  prop.type.name
+          break
       }
     }
     obj.push({
       name: parent + key,
       description: prop.description,
-      type: prop.name ? prop.name : (prop.type ? prop.type.name : prop.flowType.name),
+      type: computedType,
       required: typeof prop.required === 'boolean' && prop.required,
       defaultValue: prop.defaultValue
         ? (prop.defaultValue.computed ? 'function()' : prop.defaultValue.value)
