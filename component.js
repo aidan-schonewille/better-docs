@@ -99,35 +99,12 @@ var parseVue = function (filePath, doclet) {
 
 function parseReactPropTypesRecursive(props, parent = '', obj = []){
   Object.entries(props || {}).forEach(([key, prop]) => {
-    let computedType;
+    let computedType = '', shapePrefix = ''
+    console.log(prop?.name, prop?.type, prop?.type?.name, prop?.type?.value?.name)
     if(prop?.name) {
-      computedType = prop.name
+     [computedType, shapePrefix] = getPropName(prop)
     } else {
-      switch(prop?.type?.name) {
-        case 'shape': 
-          parseReactPropTypesRecursive(prop.type.value, parent + key + '.', obj)
-          computedType = 'object'
-          break
-        case 'objectOf': 
-          if(prop.type.value?.name === 'shape'){
-            parseReactPropTypesRecursive(prop.type.value.value, parent + key + '{...}.', obj)
-            computedType = 'objectOf(object)'
-          } else {
-            computedType = `objectOf(${prop.type.value.name})`
-          }
-          break
-        case 'arrayOf':
-          if(prop.type.value?.name === 'shape'){
-            parseReactPropTypesRecursive(prop.type.value.value, parent + key + '[...].', obj)
-            computedType = 'arrayOf(object)'
-          } else {
-            computedType = `arrayOf(${prop.type.value.name})`
-          }
-          break
-        default:
-          computedType =  prop.type.name
-          break
-      }
+      [computedType, shapePrefix] = getPropName(prop.type)
     }
     obj.push({
       name: parent + key,
@@ -138,8 +115,35 @@ function parseReactPropTypesRecursive(props, parent = '', obj = []){
         ? (prop.defaultValue.computed ? 'function()' : prop.defaultValue.value)
         : undefined
     })
+    if (prop?.name === 'shape') parseReactPropTypesRecursive(prop.value, parent + key + shapePrefix + '.', obj)
+    else if (prop?.value?.name === 'shape') parseReactPropTypesRecursive(prop.value.value, parent + key + shapePrefix + '.', obj)
+    else if (prop?.type?.name === 'shape') parseReactPropTypesRecursive(prop.type.value, parent + key + shapePrefix + '.', obj)
+    else if (prop?.type?.value?.name === 'shape') parseReactPropTypesRecursive(prop.type.value.value, parent + key + shapePrefix + '.', obj)
   })
   return obj
+
+  function getPropName(prop){
+    switch(prop?.name) {
+      case 'shape': 
+        return ['object', '']
+      case 'objectOf': 
+        if(prop?.value?.name === 'shape'){
+          return ['objectOf(object)', '{}']
+        } else {
+          return [`objectOf(${prop.value.name})`, '']
+        }
+      case 'arrayOf':
+        if(prop?.value?.name === 'shape'){
+          return ['arrayOf(object)', '[]']
+        } else {
+          return [`arrayOf(${prop?.value?.name})`, '']
+        }
+      case 'union':
+        return [prop?.value.map((val) => val?.name).reduce((prevVal, curVal) => prevVal + '|' + curVal), '']
+      default:
+        return [prop?.name, '']
+    }
+  }
 }
 
 exports.parseVue = parseVue
